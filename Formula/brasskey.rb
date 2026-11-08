@@ -8,6 +8,13 @@ class Brasskey < Formula
   sha256 "35b47ead538e3c1233be5a64f1cef1e4bf46493cc2a982d4aa353c7df0f5805f"
   license "Apache-2.0"
 
+  bottle do
+    root_url "https://github.com/Prcept-AI/homebrew-tap/releases/download/brasskey-0.1.0a2"
+    sha256 cellar: :any, arm64_sequoia: "449e5598705faf67dcb383bfe5833c2d1021987d4f0379c9e3caf1178aa6352e"
+    sha256 cellar: :any, arm64_linux:   "1dcaa4970736cb890e7e392595483c861b67ac24dad460471c90c6d9e80552cd"
+    sha256 cellar: :any, x86_64_linux:  "7d3dd22a59cba0f3b3fffece18eb864816de7a7da65f970d83b487af703be8c3"
+  end
+
   depends_on "pkgconf" => :build
   depends_on "rust" => :build # for hf-xet
 
