@@ -1,0 +1,75 @@
+# Build and test bottles for pull requests (brew test-bot), from the `brew tap-new` template.
+# Changes from the template: bottles for macOS 15 (Sequoia, Apple Silicon; they also install on
+# newer macOS) and for Linux x86_64 and arm64, and the Homebrew container pinned by digest.
+name: brew test-bot
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  test-bot:
+    name: Bottles (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+          - os: ubuntu-24.04
+            container:
+              image: ghcr.io/homebrew/brew:main@sha256:b067d138173bf76277547a898ed84e79bd35e6963eafc6287193c35dd52f32a5
+              options: --privileged
+          - os: ubuntu-24.04-arm
+            container:
+              image: ghcr.io/homebrew/brew:main@sha256:b067d138173bf76277547a898ed84e79bd35e6963eafc6287193c35dd52f32a5
+              options: --privileged
+    runs-on: ${{ matrix.os }}
+    # The images are pinned by digest in the matrix above; zizmor can't see through the expression.
+    container: ${{ fromJSON(toJSON(matrix.container)) }} # zizmor: ignore[unpinned-images]
+    timeout-minutes: 90
+    permissions:
+      actions: read # test-bot reads workflow runs
+      checks: read # and check results
+      contents: read # and the tap
+      pull-requests: read # and the pull request being tested
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Homebrew Bundler RubyGems
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ matrix.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ matrix.os }}-rubygems-
+
+      - run: brew test-bot --only-cleanup-before
+
+      - run: brew test-bot --only-setup
+
+      - run: brew test-bot --only-tap-syntax
+
+      - run: brew test-bot --only-formulae
+        if: github.event_name == 'pull_request'
+
+      - name: Upload bottles as artifact
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bottles_${{ matrix.os }}
+          path: "*.bottle.*"

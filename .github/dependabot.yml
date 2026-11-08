@@ -1,0 +1,12 @@
+# Weekly, grouped updates for the pinned actions, after a 7-day cooldown.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
